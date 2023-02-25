@@ -20,10 +20,10 @@ find_package(rclpy REQUIRED)
 
 find_package(rosidl_default_generators REQUIRED)
 
-rosidl_generate_interfaces(${PROJECT_NAME}
-  "msg/Telem.msg"
-  "msg/CtlTraj.msg"
- )
+# rosidl_generate_interfaces(${PROJECT_NAME}
+#   "msg/Telem.msg"
+#   "msg/CtlTraj.msg"
+#  )
 
 # # Include Cpp "include" directory
 # include_directories(include)
