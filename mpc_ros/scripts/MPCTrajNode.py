@@ -313,11 +313,6 @@ def main(args=None):
                         mpc_traj_node.state_info[2] + ref_state_error[2]/1.5,
                         mpc_traj_node.state_info[3] + ref_state_error[3]/1.5]
 
-        # print("traj_state: ", traj_state)  
-        # print("adjusted_state: ", offset_state)
-        # print("ref_state_error: ", ref_state_error)
-        # print("state info: ", mpc_traj_node.state_info)
-
         quad_mpc.reinitStartGoal(offset_state, desired_state)
         start_time = time.time()
 
