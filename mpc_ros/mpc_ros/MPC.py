@@ -164,7 +164,8 @@ class MPC():
     def reinitStartGoal(self, start, goal):
         self.state_init = ca.DM(start)   # initial state
         self.state_target = ca.DM(goal)  # target state
-
+        print("length of state_init: ", len(start))
+        print("length of state_target: ", len(goal))
 
     def moveObstacle(self, x, y):
         """move obstacle to new position"""

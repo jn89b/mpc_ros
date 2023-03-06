@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 import rclpy 
 import numpy as np
 
@@ -130,75 +129,20 @@ class MPCTrajPublisher(Node):
             error.append(desired_state[i] - current_state[i])
         return error
 
-    # def publishTrajectory(self, ref_position:list, 
-    #                     ref_velocity:list) -> None:
-    #     """
-    #     publishTrajectory to the controller node , this 
-    #     will take in the ENU reference position and velocity 
-    #     and convert it to NED and publish it to the controller node
-    #     """
-    #     traj_msg = CtlTraj()
-    #     ref_position = [float(i) for i in ref_position]
-    #     ref_velocity = [float(i) for i in ref_velocity]
-
-    #     ned_position = quaternion_tools.convertENUToNED(
-    #         ref_position[0], ref_position[1], ref_position[2])
-
-    
-    #     ned_velocity = quaternion_tools.convertENUToNED(
-    #         ref_velocity[0], ref_velocity[1], ref_velocity[2])
-
-    #     #if ned_position is None or ned_velocity is None:
-    #     traj_msg.x = ned_position[0]
-    #     traj_msg.y = ned_position[1]
-    #     traj_msg.z = ned_position[2]
-    #     traj_msg.yaw = -float(ref_position[3])
-
-    #     dz = ref_position[2] - self.state_info[2]
-        
-    #     lower_z_bound = 5.0
-    #     upper_z_bound = 60.0
-
-    #     if self.state_info[2] <= lower_z_bound:
-    #         vz_ref = 0.25 
-    #     elif self.state_info[2] >= upper_z_bound:
-    #         vz_ref = -0.25
-    #     else:
-    #         vz_ref = ref_velocity[2] - self.control_info[2]
-
-    #     print("ned_velocity = ", ned_velocity)
-    #     traj_msg.vx = ned_velocity[0]#ned_velocity[0]
-    #     traj_msg.vy = ned_velocity[1]#ned_velocity[1]
-    #     traj_msg.vz = -vz_ref#ned_velocity[2]
-    #     traj_msg.yaw_rate = -float(ref_velocity[3])
-        
-    #     self.traj_pub.publish(traj_msg)
-
-
     def publishTrajectory(self, traj_dictionary:dict, 
                           state_idx:int, command_idx:int) -> None:
         """publishTrajectory"""
         traj_msg = CtlTraj()
-        traj_x = traj_dictionary['x']
-        traj_y = traj_dictionary['y']
-        traj_z = traj_dictionary['z']
-        traj_yaw = traj_dictionary['yaw']
-
-        traj_vx = traj_dictionary['vx']
-        traj_vy = traj_dictionary['vy']
-        traj_vz = traj_dictionary['vz']
-        traj_yaw_rate = traj_dictionary['yaw_rate']
-
         #x,y,z to one array
-        traj_x = np.array(traj_x)
-        traj_y = np.array(traj_y)
-        traj_z = np.array(traj_z)
-        traj_yaw = np.array(traj_yaw)
+        traj_x = np.array(traj_dictionary['x'])
+        traj_y = np.array(traj_dictionary['y'])
+        traj_z = np.array(traj_dictionary['z'])
+        traj_yaw = np.array(traj_dictionary['yaw'])
 
-        traj_vx = np.array(traj_vx)
-        traj_vy = np.array(traj_vy)
-        traj_vz = np.array(traj_vz)
-        traj_yaw_rate = np.array(traj_yaw_rate)
+        traj_vx = np.array(traj_dictionary['vx'])
+        traj_vy = np.array(traj_dictionary['vy'])
+        traj_vz = np.array(traj_dictionary['vz'])
+        traj_yaw_rate = np.array(traj_dictionary['yaw_rate'])
         
         ned_position = quaternion_tools.convertENUToNEDVector(
             traj_x, traj_y, traj_z)
@@ -206,10 +150,7 @@ class MPCTrajPublisher(Node):
         ned_velocity = quaternion_tools.convertENUToNEDVector(
             traj_vx, traj_vy, traj_vz)
 
-        
-
         traj_msg = CtlTraj()
-
         traj_msg.x = list(ned_position[0][0])        
         traj_msg.y = list(ned_position[1][0])
         traj_msg.z = list(ned_position[2][0])
@@ -220,8 +161,7 @@ class MPCTrajPublisher(Node):
         traj_msg.vy = list(ned_velocity[1][0])
         traj_msg.vz = list(-ned_velocity[2][0]) #no clue why negative works
         traj_msg.yaw_rate = list(traj_yaw_rate[0])
-
-        print("traj_msg = ", traj_msg)
+        traj_msg.idx = state_idx
 
         self.traj_pub.publish(traj_msg)
 
@@ -232,12 +172,13 @@ def initQuadMPC():
     simple_quad_model.set_state_space()
 
     #set these as parameters 
+    max_vel = 3.0;
     simple_quad_constraint_params = {
-        'vx_max': 5.0, #m/s
-        'vx_min': -5.0, #m/s
+        'vx_max': max_vel, #m/s
+        'vx_min': -max_vel, #m/s
 
-        'vy_max': 5.0, #m/s
-        'vy_min': -5.0, #m/s
+        'vy_max': max_vel, #m/s
+        'vy_min': -max_vel, #m/s
 
         'vz_max': 0.5, #m/s
         'vz_min': -0.5, #m/s
@@ -278,7 +219,6 @@ def get_state_control_ref(traj_dictionary:dict,
     
     return [x_ref, y_ref, z_ref, psi_ref], \
         [vx_ref, vy_ref, vz_ref, psi_dot_ref]
-
 
 def set_state_control_idx(mpc_params:dict, 
     solution_time:float, idx_buffer:int) -> int:
@@ -387,9 +327,6 @@ def main(args=None):
         traj_state, traj_control = get_state_control_ref(
             traj_dictionary, state_idx, control_idx)
 
-        # mpc_traj_node.publishTrajectory(
-        #     ref_state_error, traj_control)
-
         mpc_traj_node.publishTrajectory(traj_dictionary, 
                                         state_idx, 
                                         control_idx)
@@ -417,8 +354,7 @@ def main(args=None):
                 #send 0 velocity command
                 ref_state_error = [0.0, 0.0, 0.0, 0.0]
                 ref_control_error = [0.0, 0.0, 0.0, 0.0]
-                # mpc_traj_node.publishTrajectory(
-                #     ref_state_error, ref_control_error)
+
                 mpc_traj_node.publishTrajectory(traj_dictionary, 
                                                 state_idx, 
                                                 control_idx)
@@ -429,16 +365,20 @@ def main(args=None):
                 # return
 
         if distance_error < dist_error_tol:
+            """
+            refactor add the length of N of commands to 
+            stay where you are at 
+            """
             #send 0 velocity command
-            ref_state_error = [0.0, 0.0, 0.0, 0.0]
-            ref_control_error = [0.0, 0.0, 0.0, 0.0]
-            mpc_traj_node.publishTrajectory(
-                ref_state_error, ref_control_error)
-            
-            # mpc_traj_node.destroy_node()
-            # rclpy.shutdown()
-            # return 
+            # ref_state_error = [0.0, 0.0, 0.0, 0.0]
+            # ref_control_error = [0.0, 0.0, 0.0, 0.0]
+            mpc_traj_node.publishTrajectory(traj_dictionary, 
+                                            state_idx, 
+                                            control_idx)
 
+            mpc_traj_node.destroy_node()
+            rclpy.shutdown()
+            return 
 
         desired_state = [Config.GOAL_X, 
                          Config.GOAL_Y, 

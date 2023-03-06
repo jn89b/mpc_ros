@@ -44,6 +44,7 @@ ament_python_install_package(${PROJECT_NAME})
 install(PROGRAMS
   scripts/drone_node.py
   scripts/MPCTrajNode.py
+  scripts/MPCPlaneNode.py
   DESTINATION lib/${PROJECT_NAME}
 )
 ament_package()

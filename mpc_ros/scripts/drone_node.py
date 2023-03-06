@@ -81,9 +81,9 @@ class DroneNode(Node):
         self.mav_listener.startListening()
         self.telem_pub = self.create_publisher(Telem, 'telem', self.frequency)
 
+        
         self.trajectory_sub = self.create_subscription(CtlTraj, 'trajectory', 
                                 self.trajectoryCallback, self.frequency)
-
 
     def publishData(self):
         self.mav_listener.startListening()
@@ -137,6 +137,7 @@ def main(args=None):
     ip_string = '127.0.0.1:14551'
     master = mavutil.mavlink_connection(ip_string)
     master.wait_heartbeat()
+    print("Heartbeat from system (system %u component %u)" % (master.target_system, master.target_component))
 
     drone = DroneNode(master)
     drone.publishData()

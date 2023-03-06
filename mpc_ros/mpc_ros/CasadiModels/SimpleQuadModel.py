@@ -38,7 +38,7 @@ class SimpleQuadModel():
         self.n_controls = self.controls.shape[0]
 
     def set_state_space(self):
-        self.magnitude = ca.sqrt(self.vx**2 + self.vy**2)
+        # self.magnitude = ca.sqrt(self.vx**2 + self.vy**2)
         self.z_0 = self.vx #* ca.cos(self.psi) + self.vy * ca.sin(self.psi)  
         self.z_1 = self.vy #* ca.cos(self.psi) - self.vx * ca.sin(self.psi)
         self.z_2 = self.vz 
