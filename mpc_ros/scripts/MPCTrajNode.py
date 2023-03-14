@@ -192,7 +192,7 @@ def initQuadMPC():
 
     simple_mpc_quad_params = {
         'model': simple_quad_model,
-        'N': 50,
+        'N': 40,
         'dt_val': 0.05,
         'Q': np.diag([1, 1, 1, 0.1]),
         'R': np.diag([1, 1, 1, 1.0])

@@ -21,7 +21,8 @@ import mavros
 from mavros.base import SENSOR_QOS
 
 class AirplaneSimpleModelMPC(MPC):
-    def __init__(self, mpc_params:dict, airplane_constraint_params:dict):
+    def __init__(self, mpc_params:dict, 
+                 airplane_constraint_params:dict):
         super().__init__(mpc_params)
         self.airplane_params = airplane_constraint_params
 
@@ -62,8 +63,9 @@ class AirplaneSimpleModelMPC(MPC):
         self.lbx['X'][4, :] = self.airplane_params['theta_min']
         self.ubx['X'][4, :] = self.airplane_params['theta_max']
 
-    def returnTrajDictionary(self, projected_controls:list,
-                             projected_states:list) -> dict:
+    def returnTrajDictionary(self, 
+        projected_controls:list,
+        projected_states:list) -> dict:
         traj_dictionary = {}
         traj_dictionary['x'] = projected_states[0,:]
         traj_dictionary['y'] = projected_states[1,:]
@@ -80,8 +82,10 @@ class AirplaneSimpleModelMPC(MPC):
 
         return traj_dictionary
     
-    def get_state_control_ref(self, traj_dictionary:dict, 
-        state_idx:int, ctrl_idx:int) -> tuple:
+    def get_state_control_ref(self, 
+        traj_dictionary:dict, 
+        state_idx:int, 
+        ctrl_idx:int) -> tuple:
         """get_state_control_ref"""
         x_ref = traj_dictionary['x'][state_idx]
         y_ref = traj_dictionary['y'][state_idx]
@@ -121,7 +125,7 @@ class MPCTrajFWPublisher(Node):
 
 
         #turn this to a parameter later
-        self.mpc_traj_freq = 50
+        self.mpc_traj_freq = 100
         
         # self.state_info = [0,0,0,0,0,0,0,0] #x, y, z, psi, vx, vy, vz, psi_dot
         self.state_info = [0, # x
@@ -152,6 +156,73 @@ class MPCTrajFWPublisher(Node):
                                                   self.position_callback, 
                                                   qos_profile=SENSOR_QOS)
 
+        self.initHistory()
+
+    def initHistory(self) -> None:
+        self.x_history = []
+        self.y_history = []
+        self.z_history = []
+        self.phi_history = []
+        self.theta_history = []
+        self.psi_history = []
+        self.v_history = []
+
+        self.x_trajectory = []
+        self.y_trajectory = []
+        self.z_trajectory = []
+        self.phi_trajectory = []
+        self.theta_trajectory = []
+        self.psi_trajectory = []
+        self.idx_history = []
+        self.v_trajectory = []
+        self.obstacles = []
+
+        self.pickle_history = {
+            'x_history': None,
+            'y_history': None,
+            'z_history': None,
+
+            'phi_history': None,
+            'theta_history': None,
+            'psi_history': None,
+            'v_history': None,
+
+            'x_trajectory': None,
+            'y_trajectory': None,
+            'z_trajectory': None,
+            'phi_trajectory': None,
+            'theta_trajectory': None,
+            'psi_trajectory': None,
+            'v_trajectory': None,
+            'idx_history': None,
+            'obstacles': None
+        }
+
+    def savePickle(self, pickle_file:str) -> None:
+        """save pickle file"""
+        self.pickle_history['x_history'] = self.x_history
+        self.pickle_history['y_history'] = self.y_history
+        self.pickle_history['z_history'] = self.z_history
+
+        self.pickle_history['phi_history'] = self.phi_history
+        self.pickle_history['theta_history'] = self.theta_history
+        self.pickle_history['psi_history'] = self.psi_history
+        self.pickle_history['v_history'] = self.v_history
+
+        self.pickle_history['x_trajectory'] = self.x_trajectory
+        self.pickle_history['y_trajectory'] = self.y_trajectory
+        self.pickle_history['z_trajectory'] = self.z_trajectory
+        self.pickle_history['phi_trajectory'] = self.phi_trajectory
+        self.pickle_history['theta_trajectory'] = self.theta_trajectory
+        self.pickle_history['psi_trajectory'] = self.psi_trajectory
+        self.pickle_history['v_trajectory'] = self.v_trajectory
+        self.pickle_history['idx_history'] = self.idx_history
+        self.pickle_history['obstacles'] = Config.OBSTACLES
+
+        with open(pickle_file+'.pkl', 'wb') as handle:
+            pkl.dump(self.pickle_history, handle)
+
+        print('Saved pickle file: ', pickle_file)
 
     # def stateCallback(self, msg):
     #     enu_coords = quaternion_tools.convertNEDToENU(
@@ -160,15 +231,21 @@ class MPCTrajFWPublisher(Node):
     #     self.state_info[0] = enu_coords[0]
     #     self.state_info[1] = enu_coords[1]
     #     self.state_info[2] = enu_coords[2]
+
+    #     #wrap yaw to 0-360
     #     self.state_info[3] = msg.roll
-    #     self.state_info[4] = -msg.pitch
-    #     self.state_info[5] = -msg.yaw  # (yaw+ (2*np.pi) ) % (2*np.pi);
+    #     self.state_info[4] = msg.pitch
+    #     self.state_info[5] = msg.yaw #-(msg.yaw+ (2*np.pi) ) % (2*np.pi);
     #     self.state_info[6] = np.sqrt(msg.vx**2 + msg.vy**2 + msg.vz**2)
 
+    #     #rotate roll and pitch rates to ENU frame   
     #     self.control_info[0] = msg.roll_rate
     #     self.control_info[1] = msg.pitch_rate
     #     self.control_info[2] = msg.yaw_rate
     #     self.control_info[3] = np.sqrt(msg.vx**2 + msg.vy**2 + msg.vz**2)
+
+    #     print("yaw", np.rad2deg(msg.yaw)) 
+    #     #print("atan2", np.rad2deg(np.arctan2(enu_coords[1], enu_coords[0])))
 
     def position_callback(self, msg):
         # positions
@@ -195,6 +272,14 @@ class MPCTrajFWPublisher(Node):
         self.control_info[2] = msg.twist.twist.angular.z
         self.control_info[3] = msg.twist.twist.linear.x
     
+        self.x_history.append(self.state_info[0])
+        self.y_history.append(self.state_info[1])
+        self.z_history.append(self.state_info[2])
+        self.phi_history.append(self.state_info[3])
+        self.theta_history.append(self.state_info[4])
+        self.psi_history.append(self.state_info[5])
+        self.v_history.append(self.state_info[6])
+
     def computeError(self, current_state:list, desired_state:list) -> list:
         """computeError"""
         error = []
@@ -243,6 +328,14 @@ class MPCTrajFWPublisher(Node):
         
         traj_msg.idx = state_idx
 
+        self.x_trajectory.append(traj_x)
+        self.y_trajectory.append(traj_y)
+        self.z_trajectory.append(traj_z)
+        self.v_trajectory.append(traj_v_cmd)
+        self.phi_trajectory.append(traj_phi)
+        self.theta_trajectory.append(traj_theta)
+        self.psi_trajectory.append(traj_psi)
+        self.idx_history.append(state_idx)
         self.traj_pub.publish(traj_msg)
 
 
@@ -267,16 +360,16 @@ def initFWMPC() -> AirplaneSimpleModelMPC:
         'phi_min': np.deg2rad(-55),
         'phi_max': np.deg2rad(55),
     }
-
-    Q = ca.diag([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
-    R = ca.diag([0.5, 0.5, 0.5, 1.0])
+    
+    Q = ca.diag([0.75, 0.75, 0.1 , 1.0, 1.0, 0.5, 1.0])
+    R = ca.diag([1.0, 1.0, 1.0, 1.0])
 
     simple_mpc_fw_params = {
         'model': simple_airplane_model,
-        'dt_val': 0.02,
-        'N': 20,
+        'dt_val': 0.1,
+        'N': 35,
         'Q': Q,
-        'R': R,
+        'R': R
     }
 
     fw_mpc = AirplaneSimpleModelMPC(simple_mpc_fw_params, 
@@ -287,23 +380,21 @@ def initFWMPC() -> AirplaneSimpleModelMPC:
 def main(args=None):
     rclpy.init(args=args)
 
-
     control_idx = 10
     state_idx = -2
     dist_error_tol = 5.0
-    idx_buffer = 5
+    idx_buffer = 1
 
     fw_mpc = initFWMPC()
 
     mpc_traj_node = MPCTrajFWPublisher()
     rclpy.spin_once(mpc_traj_node)
 
-    goal_z = 35
-    dist_error_tol = 15.0
+    goal_z = 50
+    dist_error_tol = 20
 
     print("len of state info: ", len(mpc_traj_node.state_info))
     print("len of control info: ", len(mpc_traj_node.control_info))
-
 
     desired_state = [
             Config.GOAL_X, 
@@ -341,20 +432,20 @@ def main(args=None):
     mpc_traj_node.publishTrajectory(traj_dictionary, state_idx, control_idx)
 
     while rclpy.ok():
-
+        print("state info: ", mpc_traj_node.state_info)
         ref_state_error = mpc_traj_node.computeError(
             mpc_traj_node.state_info, traj_state)
           
         rclpy.spin_once(mpc_traj_node)
         
         #predict the next state
-        offset_state = [mpc_traj_node.state_info[0] + ref_state_error[0]/1.5,
-                        mpc_traj_node.state_info[1] + ref_state_error[1]/1.5,
-                        mpc_traj_node.state_info[2] + ref_state_error[2]/1.5,
-                        mpc_traj_node.state_info[3] + ref_state_error[3]/1.5, 
-                        mpc_traj_node.state_info[4] + ref_state_error[4]/1.5,
-                        mpc_traj_node.state_info[5] + ref_state_error[5]/1.5, 
-                        mpc_traj_node.state_info[6] + ref_state_error[6]/1.5]
+        offset_state = [mpc_traj_node.state_info[0], #+ ref_state_error[0]/1.5,
+                        mpc_traj_node.state_info[1], #+ ref_state_error[1]/1.5,
+                        mpc_traj_node.state_info[2], #+ ref_state_error[2]/1.5,
+                        mpc_traj_node.state_info[3], #+ ref_state_error[3]/1.5, 
+                        mpc_traj_node.state_info[4], #+ ref_state_error[4]/1.5,
+                        mpc_traj_node.state_info[5], #+ ref_state_error[5]/1.5, 
+                        mpc_traj_node.state_info[6]] #+ ref_state_error[6]/1.5]
         
         fw_mpc.reinitStartGoal(offset_state, desired_state)
         start_time = time.time()
@@ -391,7 +482,7 @@ def main(args=None):
 
         if Config.OBSTACLE_AVOID:
             #check if within obstacle SD
-            rclpy.spin_once(mpc_traj_node)
+            # rclpy.spin_once(mpc_traj_node)
 
             current_x = mpc_traj_node.state_info[0]
             current_y = mpc_traj_node.state_info[1]
@@ -421,9 +512,11 @@ def main(args=None):
             #send 0 velocity command
             # ref_state_error = [0.0, 0.0, 0.0, 0.0]
             # ref_control_error = [0.0, 0.0, 0.0, 0.0]
+            mpc_traj_node.savePickle('test')
             mpc_traj_node.publishTrajectory(traj_dictionary, 
                                             state_idx, 
                                             control_idx)
+
 
             mpc_traj_node.destroy_node()
             rclpy.shutdown()
@@ -436,9 +529,9 @@ def main(args=None):
                 mpc_traj_node.state_info[3], 
                 mpc_traj_node.state_info[4], 
                 mpc_traj_node.state_info[5], 
-                mpc_traj_node.state_info[6]]
+                0]
 
-        rclpy.spin_once(mpc_traj_node)
+        # rclpy.spin_once(mpc_traj_node)
 
 if __name__ == '__main__':
     main()
