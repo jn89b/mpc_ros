@@ -60,8 +60,8 @@ class AirplaneSimpleModel():
         self.y_fdot = self.v_cmd * ca.cos(self.theta_f) * ca.sin(self.psi_f)
         self.z_fdot = -self.v_cmd * ca.sin(self.theta_f)
 
-        self.phi_fdot = self.u_phi
-        self.theta_fdot = self.u_theta
+        self.phi_fdot = -self.u_phi - self.phi_f
+        self.theta_fdot = -self.u_theta - self.theta_f 
         ###!!!!!! From the PAPER ADD A NEGATIVE SIN BECAUSE OF SIGN CONVENTION!!!!!!!###
         self.psi_fdot = -self.g * (ca.tan(self.phi_f) / self.v_cmd)
         self.airspeed_fdot = self.v_cmd # u  

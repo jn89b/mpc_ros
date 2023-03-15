@@ -32,25 +32,29 @@ def create_obstacles(num_obstacles=1, obstacle_diameter=0.5,
 
         # #         obstacles.append([x, y, obstacle_diameter])
 
-
-
-
-        obstacles.append([50, 50, obstacle_diameter])
-        obstacles.append([50, 100, obstacle_diameter])
-        obstacles.append([100, 50, obstacle_diameter])
-        obstacles.append([100, 100, obstacle_diameter])
-
-        # obstacles.append([0, 0 , obstacle_diameter])
+        # obstacles.append([50, 50, obstacle_diameter])
+        # obstacles.append([50, 100, obstacle_diameter])
+        # obstacles.append([100, 50, obstacle_diameter])
         # obstacles.append([100, 100, obstacle_diameter])
+        # obstacles.append([-50, 50, obstacle_diameter])
+
+        obstacles.append([25, 25, obstacle_diameter])
+        obstacles.append([75, 75, obstacle_diameter])
+        obstacles.append([-100, -100, obstacle_diameter])
+        obstacles.append([-100, 100, obstacle_diameter])
+
+        # obstacles.append([0, 0 , obstacle_diameter])s
+        # obstacles.append([100, 100, obstacle_diameter])
+        
+        # obstacles.append([-150, 150, obstacle_diameter])
+        # obstacles.append([-150, 100, obstacle_diameter])
+        
+        # obstacles.append([-50, -50, obstacle_diameter])
+        # obstacles.append([-50, -100, obstacle_diameter])
+        # obstacles.append([-100, -50, obstacle_diameter])
         # obstacles.append([-100, -100, obstacle_diameter])
 
-        obstacles.append([-150, 150, obstacle_diameter])
-        obstacles.append([-150, 100, obstacle_diameter])
-        
-        obstacles.append([-50, -50, obstacle_diameter])
-        obstacles.append([-50, -100, obstacle_diameter])
-        obstacles.append([-100, -50, obstacle_diameter])
-        obstacles.append([-100, -100, obstacle_diameter])
+        # obstacles.append([GOAL_X, GOAL_Y, 20])
 
         # x_array = np.arange(x_min, x_max, 25)
         # y_array = np.arange(y_min, y_max, 25)
@@ -79,7 +83,7 @@ ROBOT_DIAMETER = 5
 
 OBSTACLE_X = 0
 OBSTACLE_Y = 0         
-OBSTACLE_DIAMETER = 30
+OBSTACLE_DIAMETER = 75
 OBSTACLE_VX = 0.0
 OBSTACLE_VY = 0.0
 
@@ -99,11 +103,11 @@ if MULTIPLE_OBSTACLE_AVOID:
 BUFFER_DISTANCE = 10
 
 #NLP solver options
-MAX_ITER = 250
+MAX_ITER = 1500
 MAX_TIME = 0.1
 PRINT_LEVEL = 2
 ACCEPT_TOL = 1e-2
-ACCEPT_OBJ_TOL = 1e-2
+ACCEPT_OBJ_TOL = 1e-2   
 PRINT_TIME = 0
 
 

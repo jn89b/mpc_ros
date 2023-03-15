@@ -20,11 +20,119 @@ import time
 import mavros
 from mavros.base import SENSOR_QOS
 
+class Effector():
+    def __init__(self, effector_range:float):
+        self.effector_range = effector_range
+        self.effector_power = 10
+
+    def computePowerDensity(self,target_distance,
+                            effector_factor):
+        return self.effector_power * effector_factor/ (target_distance**2 * 4*ca.pi)
+
 class AirplaneSimpleModelMPC(MPC):
     def __init__(self, mpc_params:dict, 
                  airplane_constraint_params:dict):
         super().__init__(mpc_params)
         self.airplane_params = airplane_constraint_params
+        self.S = 0.5
+        
+        if 'effector' in self.airplane_params.keys():
+            self.effector = self.airplane_params['effector']
+            self.effector_range = self.effector.effector_range
+            self.T = 0.1
+        else:
+            self.effector = None
+            
+    def computeCost(self):
+        #tired of writing self
+        #dynamic constraints 
+
+        P = self.P
+        Q = self.Q
+        R = self.R
+        n_states = self.n_states
+        
+        for k in range(self.N):
+            states = self.X[:, k]
+            controls = self.U[:, k]
+            state_next = self.X[:, k+1]
+            
+            #penalize states and controls for now, can add other stuff too
+            self.cost_fn = self.cost_fn \
+                + (states - P[n_states:]).T @ Q @ (states - P[n_states:]) \
+                + controls.T @ R @ controls                 
+
+            # self.cost_fn =             
+            ##Runge Kutta
+            k1 = self.f(states, controls)
+            k2 = self.f(states + self.dt_val/2*k1, controls)
+            k3 = self.f(states + self.dt_val/2*k2, controls)
+            k4 = self.f(states + self.dt_val * k3, controls)
+            state_next_RK4 = states + (self.dt_val / 6) * (k1 + 2 * k2 + 2 * k3 + k4)
+            self.g = ca.vertcat(self.g, state_next - state_next_RK4) #dynamic constraints
+      
+            if self.effector != None:
+                x_pos = self.X[0,k]
+                y_pos = self.X[1,k]
+                z_pos = self.X[2,k]
+                phi = self.X[3,k]
+                theta = self.X[4,k]
+                psi = self.X[5,k]
+
+                dx = Config.GOAL_X - x_pos
+                dy = Config.GOAL_Y - y_pos
+                dz = Config.GOAL_Z - z_pos
+
+                dtarget = ca.sqrt(dx**2 + dy**2 + dz**2)
+                
+                error_dist_factor = 1 - (dtarget / self.effector_range)
+                
+                effector_dmg = self.effector.computePowerDensity(
+                    dtarget, error_dist_factor)
+                
+                #minus because we want to maximize damage
+                self.cost_fn = self.cost_fn + (self.T* effector_dmg)
+
+        if Config.OBSTACLE_AVOID:
+            for k in range(self.N):
+                #penalize obtacle distance
+                x_pos = self.X[0,k]
+                y_pos = self.X[1,k]                
+                obs_distance = ca.sqrt((x_pos - Config.OBSTACLE_X)**2 + \
+                                        (y_pos - Config.OBSTACLE_Y)**2) 
+
+    
+                obs_constraint = -obs_distance + ((Config.ROBOT_DIAMETER/2) + \
+                    (Config.OBSTACLE_DIAMETER/2))
+
+                self.cost_fn = self.cost_fn - (self.S* obs_distance)
+
+                self.g = ca.vertcat(self.g, obs_constraint) 
+
+        if Config.MULTIPLE_OBSTACLE_AVOID:
+            for obstacle in Config.OBSTACLES:
+                obs_x = obstacle[0]
+                obs_y = obstacle[1]
+                obs_diameter = obstacle[2]
+
+                for k in range(self.N):
+                    #penalize obtacle distance
+                    x_pos = self.X[0,k]
+                    y_pos = self.X[1,k]                
+                    obs_distance = ca.sqrt((x_pos - obs_x)**2 + \
+                                            (y_pos - obs_y)**2)
+                    
+
+                    obs_constraint = -obs_distance + ((Config.ROBOT_DIAMETER) + \
+                        (obs_diameter/2)) 
+
+                    self.g = ca.vertcat(self.g, obs_constraint)
+                
+                    if obstacle == [Config.GOAL_X, Config.GOAL_Y]:
+                        continue
+                    
+                    self.cost_fn = self.cost_fn + (self.S* obs_distance)
+
 
     def warmUpSolution(self, start:list, goal:list, controls:list) -> tuple:
         self.initDecisionVariables()
@@ -265,7 +373,14 @@ class MPCTrajFWPublisher(Node):
         self.state_info[4] = pitch
         self.state_info[5] = yaw  # (yaw+ (2*np.pi) ) % (2*np.pi);
         # wr
-        self.state_info[6] = msg.twist.twist.linear.x
+
+        vx = msg.twist.twist.linear.x
+        vy = msg.twist.twist.linear.y
+        vz = msg.twist.twist.linear.z
+        #get magnitude of velocity
+        self.state_info[6] = np.sqrt(vx**2 + vy**2 + vz**2)
+        #self.state_info[6] = #msg.twist.twist.linear.x
+
 
         self.control_info[0] = msg.twist.twist.angular.x
         self.control_info[1] = msg.twist.twist.angular.y
@@ -345,29 +460,30 @@ def initFWMPC() -> AirplaneSimpleModelMPC:
     simple_airplane_model.set_state_space()
     
     airplane_params = {
-        'u_psi_min': np.deg2rad(-30), #rates
-        'u_psi_max': np.deg2rad(30), #
-        'u_phi_min': np.deg2rad(-60),
-        'u_phi_max': np.deg2rad(60),
-        'u_theta_min': np.deg2rad(-20),
-        'u_theta_max': np.deg2rad(20),
+        'u_psi_min': np.deg2rad(-45), #rates
+        'u_psi_max': np.deg2rad(45), #
+        'u_phi_min': np.deg2rad(-45),
+        'u_phi_max': np.deg2rad(45),
+        'u_theta_min': np.deg2rad(-10),
+        'u_theta_max': np.deg2rad(10),
         'z_min': 5.0,
         'z_max': 100.0,
         'v_cmd_min': 18,
         'v_cmd_max': 22,
         'theta_min': np.deg2rad(-10),
         'theta_max': np.deg2rad(10),
-        'phi_min': np.deg2rad(-55),
-        'phi_max': np.deg2rad(55),
+        'phi_min': np.deg2rad(-45),
+        'phi_max': np.deg2rad(45),
+        'effector': Effector(effector_range=10)
     }
     
-    Q = ca.diag([0.75, 0.75, 0.1 , 1.0, 1.0, 0.5, 1.0])
-    R = ca.diag([1.0, 1.0, 1.0, 1.0])
+    Q = ca.diag([1.0, 1.0, 0.75, 1.0, 1.0, 1.0, 1.0])
+    R = ca.diag([0.5, 1.0, 1.0, 1.0])
 
     simple_mpc_fw_params = {
         'model': simple_airplane_model,
         'dt_val': 0.1,
-        'N': 35,
+        'N': 25,
         'Q': Q,
         'R': R
     }
@@ -381,16 +497,15 @@ def main(args=None):
     rclpy.init(args=args)
 
     control_idx = 10
-    state_idx = -2
+    state_idx = 5
     dist_error_tol = 5.0
-    idx_buffer = 1
+    idx_buffer = 2
 
     fw_mpc = initFWMPC()
-
     mpc_traj_node = MPCTrajFWPublisher()
     rclpy.spin_once(mpc_traj_node)
 
-    goal_z = 50
+    goal_z = 45
     dist_error_tol = 20
 
     print("len of state info: ", len(mpc_traj_node.state_info))
@@ -422,7 +537,6 @@ def main(args=None):
     print("traj state: ", traj_state)
     end_time = time.time()
 
-    idx_buffer = 5
     control_idx = fw_mpc.set_state_control_idx(fw_mpc.mpc_params, 
         end_time - start_time, idx_buffer)
 
@@ -529,7 +643,7 @@ def main(args=None):
                 mpc_traj_node.state_info[3], 
                 mpc_traj_node.state_info[4], 
                 mpc_traj_node.state_info[5], 
-                0]
+                mpc_traj_node.state_info[6]]
 
         # rclpy.spin_once(mpc_traj_node)
 

@@ -56,6 +56,23 @@ theta_history = df['theta_history']
 psi_history = df['psi_history']
 obstacles = df['obstacles']
 
+
+x_trajectory = df['x_trajectory']
+y_trajectory = df['y_trajectory']
+z_trajectory = df['z_trajectory']
+x_trajectory = [x[0] for x in x_trajectory]
+y_trajectory = [y[0] for y in y_trajectory]
+z_trajectory = [z[0] for z in z_trajectory]
+
+overall_horizon_x = []
+overall_horizon_y = []
+overall_horizon_z = []
+
+for x,y,z in zip(x_trajectory, y_trajectory, z_trajectory):
+    overall_horizon_x.extend(x)
+    overall_horizon_y.extend(y)
+    overall_horizon_z.extend(z)
+
 x_cmd, y_cmd, z_cmd, phi_cmd, theta_cmd, psi_cmd = get_command_ref(df)
 
 ##### PLOTS #####
@@ -95,14 +112,14 @@ ax2.plot(x_history, y_history, z_history, label='position', color='b')
 fig3, ax3 = plt.subplots(subplot_kw=dict(projection="3d"))
 ax3.set_xlim([min(x_cmd), max(x_cmd)])
 ax3.set_ylim([min(y_cmd), max(y_cmd)])
-ax3.set_zlim([30, 60])
+ax3.set_zlim([min(z_cmd), max(z_cmd)])
 
 for obstacle in obstacles:
     x = obstacle[0]
     y = obstacle[1]
-    z = 30
+    z = 20
     radius = obstacle[2]/2
-    height = 60
+    height = 30
     n_space = 10
 
     ax3.plot_surface(
@@ -114,12 +131,17 @@ for obstacle in obstacles:
     )
 
 actual_pos_array = np.array([x_history, y_history, z_history])
+trajectory_data = np.array([overall_horizon_x, 
+                            overall_horizon_y, 
+                            overall_horizon_z])
 
-position_data = [actual_pos_array]
+position_data = [actual_pos_array, trajectory_data]
+N = len(df['x_trajectory'][0][0])
+
 labels = ['Actual Position', 'Horizon']
 
 lines = [ax3.plot([], [], [])[0] for _ in range(len(position_data))] 
-color_list = sns.color_palette("hls", 1)
+color_list = sns.color_palette("hls", len(lines))
 
 for i, line in enumerate(lines):
     line._color = color_list[i]
@@ -146,14 +168,14 @@ def update_lines(num, dataLines, lines):
         else:
             interval = num - time_span
             
-        # if i == 1:
-        #     line.set_data(data[:2, N*num:N*num+N])
-        #     line.set_3d_properties(data[2, N*num:N*num+N])
-        # else:
+        if i == 1:
+            line.set_data(data[:2, N*num:N*num+N])
+            line.set_3d_properties(data[2, N*num:N*num+N])
+        else:
             
-        line.set_data(data[:2, interval:num])
-        line.set_3d_properties(data[2, interval:num])
-        
+            line.set_data(data[:2, interval:num])
+            line.set_3d_properties(data[2, interval:num])
+            
         count +=1
     
     return patches
