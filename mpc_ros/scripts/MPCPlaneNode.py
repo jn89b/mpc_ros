@@ -3,7 +3,7 @@ import casadi as ca
 import rclpy 
 import numpy as np
 
-from drone_ros.msg import Telem, CtlTraj
+from drone_interfaces.msg import Telem, CtlTraj
 from mpc_ros.CasadiModels.AirplaneModel import AirplaneSimpleModel
 from mpc_ros.MPC import MPC
 
