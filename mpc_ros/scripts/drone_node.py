@@ -2,7 +2,7 @@
 
 import rclpy
 import math as m
-from mpc_ros.msg import Telem,CtlTraj
+from drone_interfaces.msg import Telem,CtlTraj
 
 from pymavlink import mavutil
 from rclpy.node import Node
