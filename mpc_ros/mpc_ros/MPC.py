@@ -210,13 +210,22 @@ class MPC():
 
         obstacle_history = []
 
-        # if Config.OBSTACLE_AVOID:
-        #     obs_x = Config.OBSTACLE_X
-        #     obs_y = Config.OBSTACLE_Y
         self.initSolver()
 
+        if Config.RADAR_AVOID == True:
+            # constraints lower bound added
+            n_radar_networks = 1
+            num_constraints = n_radar_networks * self.N
+            lbg =  ca.DM.zeros((self.n_states*(self.N+1)+num_constraints, 1))
+            # -infinity to minimum marign value for obs avoidance  
+            lbg[self.n_states*self.N+n_states:] = -ca.inf # stay under 0.5 probability of detection 
+            
+            # constraints upper bound
+            ubg  =  ca.DM.zeros((self.n_states*(self.N+1)+num_constraints, 1))
+            #rob_diam/2 + obs_diam/2 #adding inequality constraints at the end 
+            ubg[self.n_states*self.N+n_states:] = 0.5
 
-        if Config.OBSTACLE_AVOID:
+        elif Config.OBSTACLE_AVOID:
             print("Obstacle Avoidance Enabled")
             """NEEED TO ADD OBSTACLES IN THE LBG AND UBG"""
             # constraints lower bound added 

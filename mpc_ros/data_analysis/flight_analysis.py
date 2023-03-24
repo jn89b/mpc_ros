@@ -114,6 +114,7 @@ ax3.set_xlim([min(x_cmd), max(x_cmd)])
 ax3.set_ylim([min(y_cmd), max(y_cmd)])
 ax3.set_zlim([min(z_cmd), max(z_cmd)])
 
+
 for obstacle in obstacles:
     x = obstacle[0]
     y = obstacle[1]

@@ -6,12 +6,9 @@ import numpy as np
 from drone_ros.msg import Telem, CtlTraj
 from mpc_ros.CasadiModels.AirplaneModel import AirplaneSimpleModel
 from mpc_ros.MPC import MPC
-
+from mpc_ros import RadarNetwork
 from rclpy.node import Node
-
 from mpc_ros import quaternion_tools, Config 
-from mpc_ros.CasadiModels import SimpleQuadModel
-from mpc_ros.MPC import MPC
 
 import pickle as pkl
 
@@ -42,6 +39,12 @@ class AirplaneSimpleModelMPC(MPC):
             self.T = 0.1
         else:
             self.effector = None
+
+        if Config.RADAR_AVOID == True:
+            self.radar = RadarNetwork.RadarNetwork()
+            
+            self.radar_weight = 10
+            self.radar_history = []
             
     def computeCost(self):
         #tired of writing self
@@ -93,6 +96,24 @@ class AirplaneSimpleModelMPC(MPC):
                 #minus because we want to maximize damage
                 self.cost_fn = self.cost_fn + (self.T* effector_dmg)
 
+        if Config.RADAR_AVOID == True:
+            for k in range(self.N):
+                current_position = self.X[:3,k]
+                current_heading = self.X[5,k]
+                current_roll = self.X[4,k]
+
+                detection_vals, prob_detection = self.radar.get_detection_probability(
+                    current_position, current_heading, current_roll)
+
+                self.cost_fn = self.cost_fn + (self.radar_weight * prob_detection)
+                self.radar_history.append(detection_vals)
+
+                #threshold
+                detection_threshold = 0.5
+                radar_constraint = prob_detection + detection_threshold
+
+                self.g = ca.vertcat(self.g, radar_constraint)
+                
         if Config.OBSTACLE_AVOID:
             for k in range(self.N):
                 #penalize obtacle distance
@@ -250,10 +271,6 @@ class MPCTrajFWPublisher(Node):
                              0, # u_psi
                              0  # v_cmd
                             ]
-
-        # self.state_sub = self.create_subscription(Telem, 
-        #                 'telem', self.stateCallback, 
-        #                 self.mpc_traj_freq)
         
         self.traj_pub = self.create_publisher(CtlTraj, 
                         'trajectory', 
@@ -284,6 +301,8 @@ class MPCTrajFWPublisher(Node):
         self.idx_history = []
         self.v_trajectory = []
         self.obstacles = []
+        self.radar_probability = []
+
 
         self.pickle_history = {
             'x_history': None,
@@ -325,7 +344,9 @@ class MPCTrajFWPublisher(Node):
         self.pickle_history['psi_trajectory'] = self.psi_trajectory
         self.pickle_history['v_trajectory'] = self.v_trajectory
         self.pickle_history['idx_history'] = self.idx_history
-        self.pickle_history['obstacles'] = Config.OBSTACLES
+
+        #check if config Obstacles is None
+        #self.pickle_history['obstacles'] = Config.OBSTACLES
 
         with open(pickle_file+'.pkl', 'wb') as handle:
             pkl.dump(self.pickle_history, handle)
@@ -380,8 +401,6 @@ class MPCTrajFWPublisher(Node):
         #get magnitude of velocity
         self.state_info[6] = np.sqrt(vx**2 + vy**2 + vz**2)
         #self.state_info[6] = #msg.twist.twist.linear.x
-
-
         self.control_info[0] = msg.twist.twist.angular.x
         self.control_info[1] = msg.twist.twist.angular.y
         self.control_info[2] = msg.twist.twist.angular.z
@@ -507,9 +526,6 @@ def main(args=None):
 
     goal_z = 45
     dist_error_tol = 20
-
-    print("len of state info: ", len(mpc_traj_node.state_info))
-    print("len of control info: ", len(mpc_traj_node.control_info))
 
     desired_state = [
             Config.GOAL_X, 
