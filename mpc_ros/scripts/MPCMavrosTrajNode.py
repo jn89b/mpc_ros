@@ -213,8 +213,8 @@ def initQuadMPC():
 
     simple_mpc_quad_params = {
         'model': simple_quad_model,
-        'N': 40,
-        'dt_val': 0.05,
+        'N': 25,
+        'dt_val': 0.1,
         'Q': np.diag([1, 1, 1, 0.1]),
         'R': np.diag([1, 1, 1, 1.0])
     }
@@ -278,7 +278,7 @@ def main(args=None):
     control_idx = 10
     state_idx = -2
     dist_error_tol = 5.0
-    idx_buffer = 5
+    idx_buffer = 3
 
     quad_mpc = initQuadMPC()
     mpc_traj_node = MPCTrajPublisher()

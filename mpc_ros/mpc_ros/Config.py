@@ -32,16 +32,18 @@ def create_obstacles(num_obstacles=1, obstacle_diameter=0.5,
 
         # #         obstacles.append([x, y, obstacle_diameter])
 
+        obstacles.append([70, 70, obstacle_diameter])
+
         # obstacles.append([50, 50, obstacle_diameter])
         # obstacles.append([50, 100, obstacle_diameter])
         # obstacles.append([100, 50, obstacle_diameter])
         # obstacles.append([100, 100, obstacle_diameter])
         # obstacles.append([-50, 50, obstacle_diameter])
 
-        obstacles.append([25, 25, obstacle_diameter])
-        obstacles.append([75, 75, obstacle_diameter])
-        obstacles.append([-100, -100, obstacle_diameter])
-        obstacles.append([-100, 100, obstacle_diameter])
+        # obstacles.append([25, 25, obstacle_diameter])
+        # obstacles.append([75, 75, obstacle_diameter])
+        # obstacles.append([-100, -100, obstacle_diameter])
+        # obstacles.append([-100, 100, obstacle_diameter])
 
         # obstacles.append([0, 0 , obstacle_diameter])s
         # obstacles.append([100, 100, obstacle_diameter])
@@ -70,13 +72,13 @@ START_Y = 0
 START_PSI = np.deg2rad(0)
 
 ## GOAL
-GOAL_X = 200
-GOAL_Y = 200
+GOAL_X = -30
+GOAL_Y = -30
 GOAL_Z = 45
 GOAL_PSI = 0
 
 #### OBSTACLES ####
-OBSTACLE_AVOID = False
+OBSTACLE_AVOID = True
 MOVING_OBSTACLE = False
 MULTIPLE_OBSTACLE_AVOID = False
 ROBOT_DIAMETER = 5
@@ -86,7 +88,7 @@ RADAR_USE_CASADI = False
 
 OBSTACLE_X = 0
 OBSTACLE_Y = 0         
-OBSTACLE_DIAMETER = 75
+OBSTACLE_DIAMETER = 20
 OBSTACLE_VX = 0.0
 OBSTACLE_VY = 0.0
 

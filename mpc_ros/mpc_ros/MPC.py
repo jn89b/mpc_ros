@@ -24,7 +24,7 @@ class MPC():
         self.n_states = self.model.n_states
         self.n_controls = self.model.n_controls
 
-        self.S =  2.0#obstacle avoidance weight
+        self.S =  1.0#obstacle avoidance weight
         self.cost_fn = 0
 
     def initDecisionVariables(self):
