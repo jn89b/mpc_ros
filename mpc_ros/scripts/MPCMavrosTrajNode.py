@@ -8,7 +8,9 @@ from rclpy.node import Node
 from mpc_ros import quaternion_tools, MPC, Config 
 from mpc_ros.CasadiModels import SimpleQuadModel
 from drone_ros.msg import Telem, CtlTraj
+from mavros.base import SENSOR_QOS
 
+import mavros
 import pickle as pkl
 
 import time 
@@ -89,6 +91,12 @@ class MPCTrajPublisher(Node):
                         'telem', self.stateCallback, 
                         self.mpc_traj_freq)
 
+        self.state_sub = self.create_subscription(
+            mavros.local_position.Odometry, 
+            'mavros/local_position/odom', 
+            self.stateCallback, 
+            qos_profile=SENSOR_QOS)
+
         self.traj_pub = self.create_publisher(CtlTraj, 
                         'trajectory', 
                         self.mpc_traj_freq)
@@ -103,25 +111,31 @@ class MPCTrajPublisher(Node):
                              0, #vz
                              0] #psi_dot
 
+    def stateCallback(self, msg):
+        #positions
+        self.state_info[0] = msg.pose.pose.position.x
+        self.state_info[1] = msg.pose.pose.position.y
+        self.state_info[2] = msg.pose.pose.position.z
 
-    def stateCallback(self,msg:Telem) -> None:
-        """stateCallback"""
-        enu_coords = quaternion_tools.convertNEDToENU(
-            msg.x, msg.y, msg.z)
-        
-        self.state_info[0] = enu_coords[0]
-        self.state_info[1] = enu_coords[1]
-        self.state_info[2] = enu_coords[2]
-        self.state_info[3] = -msg.yaw
+        #quaternion attitudes
+        qx = msg.pose.pose.orientation.x
+        qy = msg.pose.pose.orientation.y
+        qz = msg.pose.pose.orientation.z
+        qw = msg.pose.pose.orientation.w
+        roll,pitch,yaw = quaternion_tools.euler_from_quaternion(qx, 
+                                                                qy, 
+                                                                qz, 
+                                                                qw)
+        self.state_info[3] = (yaw+ (2*np.pi) ) % (2*np.pi);
 
-        enu_vel = quaternion_tools.convertNEDToENU(
-            msg.vx, msg.vy, msg.vz)
-        
-        self.control_info[0] = enu_vel[0]
-        self.control_info[1] = enu_vel[1]
-        self.control_info[2] = enu_vel[2]
-        self.control_info[3] = -msg.yaw_rate
-    
+        #velocities 
+        self.control_info[0] = msg.twist.twist.linear.x
+        self.control_info[1] = msg.twist.twist.linear.y
+        self.control_info[2] = msg.twist.twist.linear.z
+
+        #angular psi
+        self.control_info[3] = msg.twist.twist.angular.z
+
     def computeError(self, current_state:list, desired_state:list) -> list:
         """computeError"""
         error = []
@@ -144,23 +158,30 @@ class MPCTrajPublisher(Node):
         traj_vz = np.array(traj_dictionary['vz'])
         traj_yaw_rate = np.array(traj_dictionary['yaw_rate'])
         
-        ned_position = quaternion_tools.convertENUToNEDVector(
-            traj_x, traj_y, traj_z)
 
-        ned_velocity = quaternion_tools.convertENUToNEDVector(
-            traj_vx, traj_vy, traj_vz)
+        #convert to list
+        traj_x = traj_x[0].tolist()
+        traj_y = traj_y[0].tolist()
+        traj_z = traj_z[0].tolist()
+        traj_yaw = traj_yaw[0].tolist()
 
+        traj_vx = traj_vx[0].tolist()
+        traj_vy = traj_vy[0].tolist()
+        traj_vz = traj_vz[0].tolist()
+        traj_yaw_rate = traj_yaw_rate[0].tolist()
+        
         traj_msg = CtlTraj()
-        traj_msg.x = list(ned_position[0][0])        
-        traj_msg.y = list(ned_position[1][0])
-        traj_msg.z = list(ned_position[2][0])
-        traj_msg.yaw = list(-traj_yaw[0])
+        #convert traj x to float
+        traj_msg.x = [float(i) for i in traj_x]
+        traj_msg.y = [float(i) for i in traj_y]
+        traj_msg.z = [float(i) for i in traj_z]
+        traj_msg.yaw = [float(i) for i in traj_yaw]
 
-        dz = traj_z - self.state_info[2]
-        traj_msg.vx = list(ned_velocity[0][0])
-        traj_msg.vy = list(ned_velocity[1][0])
-        traj_msg.vz = list(-ned_velocity[2][0]) #no clue why negative works
-        traj_msg.yaw_rate = list(traj_yaw_rate[0])
+        #dz = traj_z - self.state_info[2]
+        traj_msg.vx = [float(i) for i in traj_vx]
+        traj_msg.vy = [float(i) for i in traj_vy]
+        traj_msg.vz = [float(i) for i in traj_vz]
+        traj_msg.yaw_rate = [float(i) for i in traj_yaw_rate]
         traj_msg.idx = state_idx
 
         self.traj_pub.publish(traj_msg)
@@ -253,6 +274,7 @@ def main(args=None):
     rclpy.init(args=args)
 
     #turn this into a parameter later
+
     control_idx = 10
     state_idx = -2
     dist_error_tol = 5.0
@@ -344,9 +366,6 @@ def main(args=None):
             current_y = mpc_traj_node.state_info[1]
 
             if isCollision(current_x, current_y) == True:
-
-                print("trajectory x", traj_dictionary['x'])
-                print("trajectory y", traj_dictionary['y'])
                 #send 0 velocity command
                 ref_state_error = [0.0, 0.0, 0.0, 0.0]
                 ref_control_error = [0.0, 0.0, 0.0, 0.0]
@@ -355,7 +374,7 @@ def main(args=None):
                                                 state_idx, 
                                                 control_idx)
 
-    
+
                 # mpc_traj_node.destroy_node()
                 # rclpy.shutdown()
                 # return
@@ -368,13 +387,21 @@ def main(args=None):
             #send 0 velocity command
             # ref_state_error = [0.0, 0.0, 0.0, 0.0]
             # ref_control_error = [0.0, 0.0, 0.0, 0.0]
+
+            #set trajectory to stay at current position
+
+            end_number = 100
+            state_idx = end_number
+            control_idx = end_number
+
             mpc_traj_node.publishTrajectory(traj_dictionary, 
                                             state_idx, 
                                             control_idx)
+            
 
-            mpc_traj_node.destroy_node()
-            rclpy.shutdown()
-            return 
+            # mpc_traj_node.destroy_node()
+            # rclpy.shutdown()
+            # return 
 
         desired_state = [Config.GOAL_X, 
                          Config.GOAL_Y, 

@@ -24,7 +24,7 @@ class Radar():
         self.position = position
         self.heading = heading #
         self.elevation = 0  
-        self.range = 800
+        self.range = 750
         self.c1 = c1
         self.c2 = c2
 
@@ -116,7 +116,7 @@ class RadarNetwork():
         
         """
 
-        self.a = 0.1 
+        self.a = 0.068
         self.b = 0.05
         self.c = 0.05
 

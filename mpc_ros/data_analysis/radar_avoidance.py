@@ -53,7 +53,7 @@ def get_command_ref(df:dict):
 single_radar = 'test'
 single_big = 'single_big_radar'
 loud_front = 'loud_front_mpc'
-with open(single_big+'.pkl', 'rb') as f:
+with open(single_radar+'.pkl', 'rb') as f:
     df = pkl.load(f)
 
 radar = RadarNetwork.RadarNetwork()
@@ -236,7 +236,7 @@ color_list = sns.color_palette("hls", len(lines))
 for i, line in enumerate(lines):
     line._color = color_list[i]
     #line._color = color_map[uav_list[i]]
-    line._linewidth = 5.0
+    line._linewidth = 3.0
     line.set_label(labels[i])
     
 patches = lines
@@ -277,6 +277,8 @@ line_ani = FuncAnimation(fig3, update_lines,
                 repeat=True, 
                 frames=position_data[0].shape[1]+1)
 
+#save animation
+# line_ani.save('animation.mp4', fps=30)
 # plt.show()
 
 #plot attitudes

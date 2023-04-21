@@ -4,7 +4,6 @@ import numpy as np
 
 class FlatQuadcopterModel():
     def __init__(self):
-        
         #model constants for dj100 from paper
         self.k_x = 1 
         self.k_y = 1 
