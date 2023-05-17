@@ -12,7 +12,7 @@ from rclpy.node import Node
 from mpc_ros import quaternion_tools, Config 
 
 import time 
-
+import rosbag2_py
 
 class AirplaneSimpleModelMPC(MPC):
     def __init__(self, mpc_params:dict, 
@@ -47,29 +47,7 @@ class AirplaneSimpleModelMPC(MPC):
             k4 = self.f(states + self.dt_val * k3, controls)
             state_next_RK4 = states + (self.dt_val / 6) * (k1 + 2 * k2 + 2 * k3 + k4)
             self.g = ca.vertcat(self.g, state_next - state_next_RK4) #dynamic constraints
-      
-            # if self.effector != None:
-            #     x_pos = self.X[0,k]
-            #     y_pos = self.X[1,k]
-            #     z_pos = self.X[2,k]
-            #     phi = self.X[3,k]
-            #     theta = self.X[4,k]
-            #     psi = self.X[5,k]
-
-            #     dx = Config.GOAL_X - x_pos
-            #     dy = Config.GOAL_Y - y_pos
-            #     dz = Config.GOAL_Z - z_pos
-
-            #     dtarget = ca.sqrt(dx**2 + dy**2 + dz**2)
-                
-            #     error_dist_factor = 1 - (dtarget / self.effector_range)
-                
-            #     effector_dmg = self.effector.computePowerDensity(
-            #         dtarget, error_dist_factor)
-                
-            #     #minus because we want to maximize damage
-            #     self.cost_fn = self.cost_fn + (self.T* effector_dmg)
-
+    
         if Config.RADAR_AVOID == True:
             for k in range(self.N):
                 current_position = self.X[:3,k]
@@ -241,7 +219,8 @@ class MPCTrajFWPublisher(Node):
                            0, # psi
                            0  # airspeed
                            ]
-        
+
+    
         self.control_info = [0, # u_phi
                              0, # u_theta
                              0, # u_psi
