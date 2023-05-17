@@ -7,7 +7,7 @@ import numpy as np
 from drone_ros.msg import Telem, CtlTraj
 from mpc_ros.CasadiModels.AirplaneModel import AirplaneSimpleModel
 from mpc_ros.MPC import MPC
-from mpc_ros import RadarNetwork
+# from mpc_ros import RadarNetwork
 from rclpy.node import Node
 from mpc_ros import quaternion_tools, Config 
 
@@ -368,20 +368,20 @@ def initFWMPC() -> AirplaneSimpleModelMPC:
         'u_psi_max': np.deg2rad(45), #
         'u_phi_min': np.deg2rad(-45),
         'u_phi_max': np.deg2rad(45),
-        'u_theta_min': np.deg2rad(-10),
-        'u_theta_max': np.deg2rad(10),
-        'z_min': 5.0,
-        'z_max': 100.0,
+        'u_theta_min': np.deg2rad(-5),
+        'u_theta_max': np.deg2rad(5),
+        'z_min': 50,
+        'z_max': 100,
         'v_cmd_min': 18,
         'v_cmd_max': 22,
-        'theta_min': np.deg2rad(-10),
-        'theta_max': np.deg2rad(10),
+        'theta_min': np.deg2rad(-5),
+        'theta_max': np.deg2rad(5),
         'phi_min': np.deg2rad(-45),
         'phi_max': np.deg2rad(45),
     }
 
-    Q = ca.diag([1.0, 1.0, 0.75, 1.0, 1.0, 1.0, 1.0])
-    R = ca.diag([0.5, 1.0, 1.0, 1.0])
+    Q = ca.diag([1.0, 1.0, 0.5, 1.0, 1.0, 1.0, 1.0])
+    R = ca.diag([0.5, 0.8, 1.0, 1.0])
 
     simple_mpc_fw_params = {
         'model': simple_airplane_model,
@@ -403,7 +403,7 @@ def main(args=None):
     control_idx = 10
     state_idx = 5
     dist_error_tol = 10.0
-    idx_buffer = 5
+    idx_buffer = 10
 
     fw_mpc = initFWMPC()
     mpc_traj_node = MPCTrajFWPublisher()
@@ -442,6 +442,8 @@ def main(args=None):
         end_time - start_time, idx_buffer)
 
     mpc_traj_node.publishTrajectory(traj_dictionary, state_idx, control_idx)
+
+    fw_mpc.initSolver()
 
     while rclpy.ok():
         print("state info: ", mpc_traj_node.state_info)

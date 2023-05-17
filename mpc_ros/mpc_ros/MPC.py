@@ -155,28 +155,33 @@ class MPC():
                 'print_level': Config.PRINT_LEVEL,
                 'acceptable_tol': Config.ACCEPT_TOL,
                 'acceptable_obj_change_tol': Config.ACCEPT_OBJ_TOL,
-                'warm_start_init_point': "yes"
+                'warm_start_init_point': "yes",
                 'linear_solver': "ma27"
             },
             # 'jit':True,
             'print_time': Config.PRINT_TIME,
-            #'expand':1,
+            # 'expand':1,
         }
 
 
         #### UNCOMMENT FOR COMPILED SOLVER ####
         self.so_path = 'compiled' + 'mpc_solver.so'
+        self.name_c = "nmpc_v0.c"
+        if Config.OBSTACLE_AVOID == True:
+            self.so_path = 'compiled' +'mpc_obstacle_solver.so'
+            self.name_c = 'mpc_obstacle_solver.c'
         # if Config.COMPILE == True and self.compile_once == False:
         #     print("Solver already compiled")
         #     self.solver = ca.nlpsol("solver", "ipopt", nlp_prob, solver_opts)
         #     # jit compile for speed up
         #     print("Generating shared library........")
-        #     cname = self.solver.generate_dependencies("nmpc_v0.c")  
-        #     system('gcc -fPIC -shared -O3 ' + cname + ' -o ' + self.so_path) # -O3
+        #     cname = self.solver.generate_dependencies(self.name_c)  
+        #     system('gcc -pipe -fPIC -shared -O3 ' + cname + ' -o ' + self.so_path) # -O3
         #     self.compile_once = True
+        #     print("done")
         self.solver = ca.nlpsol("solver", "ipopt", self.so_path, solver_opts)
     
-        #### UNCOMMENT FOR NON COMPILED SOLVER ####
+        # #### UNCOMMENT FOR NON COMPILED SOLVER ####
         # #create solver
         # self.solver = ca.nlpsol('solver', 'ipopt', 
         #     nlp_prob, solver_opts)
