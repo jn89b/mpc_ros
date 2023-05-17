@@ -378,7 +378,9 @@ class MPCTrajFWPublisher(Node):
     #     #print("atan2", np.rad2deg(np.arctan2(enu_coords[1], enu_coords[0])))
 
     def position_callback(self, msg):
-        # positions
+        """
+        ENU 
+        """
         self.state_info[0] = msg.pose.pose.position.x
         self.state_info[1] = msg.pose.pose.position.y
         self.state_info[2] = msg.pose.pose.position.z
@@ -395,6 +397,9 @@ class MPCTrajFWPublisher(Node):
         self.state_info[4] = pitch
         self.state_info[5] = yaw  # (yaw+ (2*np.pi) ) % (2*np.pi);
         # wr
+        print("roll in radians", roll)
+        print("yaw in radians", yaw)
+        print("pitch in radians", pitch)
 
         vx = msg.twist.twist.linear.x
         vy = msg.twist.twist.linear.y
@@ -519,7 +524,7 @@ def main(args=None):
     control_idx = 10
     state_idx = 5
     dist_error_tol = 5.0
-    idx_buffer = 2
+    idx_buffer = 5
 
     fw_mpc = initFWMPC()
     mpc_traj_node = MPCTrajFWPublisher()

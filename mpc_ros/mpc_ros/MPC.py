@@ -3,7 +3,8 @@ import numpy as np
 import math as m
 from time import time
 from mpc_ros import Config
-# import Config
+from os import system
+
 
 class MPC():
     def __init__(self, mpc_params):
@@ -26,6 +27,8 @@ class MPC():
 
         self.S =  1.0#obstacle avoidance weight
         self.cost_fn = 0
+
+        self.compile_once = False
 
     def initDecisionVariables(self):
         #decision variables
@@ -137,7 +140,7 @@ class MPC():
 
     def initSolver(self):
         
-        self.solver = None
+        # self.solver = None
 
         nlp_prob = {
             'f': self.cost_fn,
@@ -151,16 +154,32 @@ class MPC():
                 'max_iter': Config.MAX_ITER,
                 'print_level': Config.PRINT_LEVEL,
                 'acceptable_tol': Config.ACCEPT_TOL,
-                'acceptable_obj_change_tol': Config.ACCEPT_OBJ_TOL
+                'acceptable_obj_change_tol': Config.ACCEPT_OBJ_TOL,
+                'warm_start_init_point': "yes"
             },
             # 'jit':True,
-            'print_time': Config.PRINT_TIME
+            'print_time': Config.PRINT_TIME,
+            #'expand':1,
         }
 
-        #create solver
-        self.solver = ca.nlpsol('solver', 'ipopt', 
-            nlp_prob, solver_opts)
+
+        #### UNCOMMENT FOR COMPILED SOLVER ####
+        self.so_path = 'compiled' + 'mpc_solver.so'
+        # if Config.COMPILE == True and self.compile_once == False:
+        #     print("Solver already compiled")
+        #     self.solver = ca.nlpsol("solver", "ipopt", nlp_prob, solver_opts)
+        #     # jit compile for speed up
+        #     print("Generating shared library........")
+        #     cname = self.solver.generate_dependencies("nmpc_v0.c")  
+        #     system('gcc -fPIC -shared -O3 ' + cname + ' -o ' + self.so_path) # -O3
+        #     self.compile_once = True
+        self.solver = ca.nlpsol("solver", "ipopt", nlp_prob, solver_opts)
     
+        #### UNCOMMENT FOR NON COMPILED SOLVER ####
+        # #create solver
+        # self.solver = ca.nlpsol('solver', 'ipopt', 
+        #     nlp_prob, solver_opts)
+        
     def reinitStartGoal(self, start, goal):
         self.state_init = ca.DM(start)   # initial state
         self.state_target = ca.DM(goal)  # target state

@@ -46,6 +46,8 @@ install(PROGRAMS
   scripts/MPCTrajNode.py
   scripts/MPCPlaneNode.py
   scripts/MPCMavrosTrajNode.py
+  scripts/MPCPlaneLive.py
+  scripts/drone_logger.py
   DESTINATION lib/${PROJECT_NAME}
 )
 ament_package()

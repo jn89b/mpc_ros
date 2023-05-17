@@ -2,7 +2,6 @@
 import rclpy 
 import numpy as np
 
-
 from rclpy.node import Node
 
 from mpc_ros import quaternion_tools, MPC, Config 
@@ -255,8 +254,8 @@ def main(args=None):
     #turn this into a parameter later
     control_idx = 10
     state_idx = -2
-    dist_error_tol = 5.0
-    idx_buffer = 5
+    dist_error_tol = 1
+    idx_buffer = 3
 
     quad_mpc = initQuadMPC()
     mpc_traj_node = MPCTrajPublisher()

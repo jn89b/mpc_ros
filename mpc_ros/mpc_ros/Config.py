@@ -66,29 +66,33 @@ def create_obstacles(num_obstacles=1, obstacle_diameter=0.5,
                 
     return obstacles
 
+#COMPILATION OPTIONS
+COMPILE = True
+USE_COMPILE = False
+
 ## START 
 START_X = 0
 START_Y = 0
 START_PSI = np.deg2rad(0)
 
 ## GOAL
-GOAL_X = -30
-GOAL_Y = -30
-GOAL_Z = 45
+GOAL_X = 100
+GOAL_Y = -50
+GOAL_Z = 5   
 GOAL_PSI = 0
 
 #### OBSTACLES ####
-OBSTACLE_AVOID = True
+OBSTACLE_AVOID = False
 MOVING_OBSTACLE = False
 MULTIPLE_OBSTACLE_AVOID = False
-ROBOT_DIAMETER = 5
+ROBOT_DIAMETER = 1.0
 
 RADAR_AVOID = False
 RADAR_USE_CASADI = False
 
-OBSTACLE_X = 0
-OBSTACLE_Y = 0         
-OBSTACLE_DIAMETER = 20
+OBSTACLE_X = 7
+OBSTACLE_Y = 7         
+OBSTACLE_DIAMETER = 3   
 OBSTACLE_VX = 0.0
 OBSTACLE_VY = 0.0
 
@@ -109,7 +113,7 @@ BUFFER_DISTANCE = 10
 
 
 #NLP solver options
-MAX_ITER = 1500
+MAX_ITER = 100
 MAX_TIME = 0.1
 PRINT_LEVEL = 2
 ACCEPT_TOL = 1e-2

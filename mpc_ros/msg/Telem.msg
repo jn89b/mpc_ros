@@ -15,3 +15,4 @@ float64 yaw_rate  #yaw rate (rad/s)
 float64 x         # local ned x (m, positive north)
 float64 y         # local ned y (m, positive east)
 float64 z         # local ned z (m, positive DOWN)
+
