@@ -12,13 +12,15 @@ from rclpy.node import Node
 from mpc_ros import quaternion_tools, Config 
 
 import time 
-import rosbag2_py
+import subprocess
+# import rosbag2_py
 
 class AirplaneSimpleModelMPC(MPC):
     def __init__(self, mpc_params:dict, 
                  airplane_constraint_params:dict):
         super().__init__(mpc_params)
         self.airplane_params = airplane_constraint_params
+        self.S = 2
 
     def computeCost(self):
         #tired of writing self
@@ -78,6 +80,8 @@ class AirplaneSimpleModelMPC(MPC):
                 obs_constraint = -obs_distance + ((Config.ROBOT_DIAMETER/2) + \
                     (Config.OBSTACLE_DIAMETER/2))
 
+                # obs_constraint = -20
+
                 self.cost_fn = self.cost_fn - (self.S* obs_distance)
 
                 self.g = ca.vertcat(self.g, obs_constraint) 
@@ -96,8 +100,9 @@ class AirplaneSimpleModelMPC(MPC):
                                             (y_pos - obs_y)**2)
                     
 
-                    obs_constraint = -obs_distance + ((Config.ROBOT_DIAMETER) + \
-                        (obs_diameter/2)) 
+                    obs_constraint = obs_distance - ((Config.ROBOT_DIAMETER/2) + \
+                        (obs_diameter/2))
+                    
 
                     self.g = ca.vertcat(self.g, obs_constraint)
                 
@@ -198,8 +203,6 @@ class AirplaneSimpleModelMPC(MPC):
         idx = int(round(control_idx)) + idx_buffer
         
         return idx
-    
-
 
 class MPCTrajFWPublisher(Node):
     def __init__(self):
@@ -238,7 +241,16 @@ class MPCTrajFWPublisher(Node):
             self.mpc_traj_freq)
 
         self.initHistory()
+        
+        #run command line to start rosbag2 
+        #ros2 bag record -a -o mpc_traj_fw.bag --compression-mode file
+        #ros2 bag play mpc_traj_fw.bag
 
+        #run subprocess to start rosbag2
+        # output_file = "mpc_traj_fw"
+        # command = f"ros2 bag record -o {output_file} -a"
+        # self.rosbag_process = subprocess.check_output(
+        #     command)
 
     def initHistory(self) -> None:
         self.x_history = []
@@ -270,24 +282,32 @@ class MPCTrajFWPublisher(Node):
 
         #wrap yaw to 0-360
         self.state_info[3] = msg.roll
-        self.state_info[4] = -msg.pitch
+        self.state_info[4] = msg.pitch
         self.state_info[5] = msg.yaw
         self.state_info[6] = np.sqrt(msg.vx**2 + msg.vy**2 + msg.vz**2)
 
         #rotate roll and pitch rates to ENU frame   
         self.control_info[0] = msg.roll_rate
-        self.control_info[1] = -msg.pitch_rate
+        self.control_info[1] = msg.pitch_rate
         self.control_info[2] = msg.yaw_rate
         self.control_info[3] = np.sqrt(msg.vx**2 + msg.vy**2 + msg.vz**2) 
 
 
-    def computeError(self, current_state:list, desired_state:list) -> list:
-        #"""computeError"""
-        current_array = np.array(current_state)
-        desired_array = np.array(desired_state)
-        error = desired_array - current_array
-        return error.tolist()
+    # def computeError(self, current_state:list, desired_state:list) -> list:
+    #     #"""computeError"""
+    #     current_array = np.array(current_state)
+    #     desired_array = np.array(desired_state)
+    #     error = desired_array - current_array
+    #     return error.tolist()
     
+    def computeError(self, current_state:list, desired_state:list) -> list:
+        """computeError"""
+        error = []
+        #catch list index out of range
+        for i in range(len(current_state)):
+            error.append(desired_state[i] - current_state[i])
+        return error
+
     def publishTrajectory(self, traj_dictionary:dict, 
                             state_idx:int, command_idx:int) -> None:
         """
@@ -359,7 +379,7 @@ def initFWMPC() -> AirplaneSimpleModelMPC:
         'phi_min': np.deg2rad(-45),
         'phi_max': np.deg2rad(45),
     }
-    
+
     Q = ca.diag([1.0, 1.0, 0.75, 1.0, 1.0, 1.0, 1.0])
     R = ca.diag([0.5, 1.0, 1.0, 1.0])
 
@@ -382,14 +402,12 @@ def main(args=None):
 
     control_idx = 10
     state_idx = 5
-    dist_error_tol = 5.0
-    idx_buffer = 2
+    dist_error_tol = 10.0
+    idx_buffer = 5
 
     fw_mpc = initFWMPC()
     mpc_traj_node = MPCTrajFWPublisher()
     rclpy.spin_once(mpc_traj_node)
-
-    dist_error_tol = 20
 
     desired_state = [
             Config.GOAL_X, 
@@ -475,7 +493,30 @@ def main(args=None):
         print("\n")
 
         if Config.OBSTACLE_AVOID:
-            pass
+            #check if within obstacle SD
+            # rclpy.spin_once(mpc_traj_node)
+
+            current_x = mpc_traj_node.state_info[0]
+            current_y = mpc_traj_node.state_info[1]
+
+            #check how far away from (0,0) you are
+            if np.linalg.norm([current_x, current_y]) < Config.OBSTACLE_DIAMETER:
+
+                print("trajectory x", traj_dictionary['x'])
+                print("trajectory y", traj_dictionary['y'])
+                #send 0 velocity command
+                ref_state_error = [0.0, 0.0, 0.0, 0.0]
+                ref_control_error = [0.0, 0.0, 0.0, 0.0]
+
+                mpc_traj_node.publishTrajectory(traj_dictionary, 
+                                                state_idx, 
+                                                control_idx)
+
+
+            #     # mpc_traj_node.destroy_node()
+            #     # rclpy.shutdown()
+            #     # return
+
 
         if distance_error < dist_error_tol:
             """
@@ -485,6 +526,10 @@ def main(args=None):
             mpc_traj_node.publishTrajectory(traj_dictionary, 
                                             state_idx, 
                                             control_idx)
+            
+            #close subprocesses
+            # mpc_traj_node.rosbag_process.kill()
+
             mpc_traj_node.destroy_node()
             rclpy.shutdown()
             return 

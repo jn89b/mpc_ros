@@ -127,7 +127,7 @@ class MPC():
                                             (y_pos - obs_y)**2)
                     
 
-                    obs_constraint = -obs_distance + ((Config.ROBOT_DIAMETER) + \
+                    obs_constraint = -obs_distance - ((Config.ROBOT_DIAMETER/2) + \
                         (obs_diameter/2)) 
 
                     self.g = ca.vertcat(self.g, obs_constraint)
@@ -135,7 +135,7 @@ class MPC():
                     if obstacle == [Config.GOAL_X, Config.GOAL_Y]:
                         continue
                     
-                    self.cost_fn = self.cost_fn + (self.S* obs_distance)
+                    # self.cost_fn = self.cost_fn + (self.S* obs_distance)
 
 
     def initSolver(self):
@@ -255,7 +255,7 @@ class MPC():
             # constraints upper bound
             ubg  = ca.DM.zeros((self.n_states*(self.N+1)+self.N, 1))
             #rob_diam/2 + obs_diam/2 #adding inequality constraints at the end 
-            ubg[self.n_states*self.N+n_states:] = -Config.BUFFER_DISTANCE
+            ubg[self.n_states*self.N+n_states:] = -40
 
         elif Config.MULTIPLE_OBSTACLE_AVOID:
             print("Multiple Obstacle Avoidance Enabled")
