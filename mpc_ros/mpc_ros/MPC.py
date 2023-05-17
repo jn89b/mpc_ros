@@ -156,6 +156,7 @@ class MPC():
                 'acceptable_tol': Config.ACCEPT_TOL,
                 'acceptable_obj_change_tol': Config.ACCEPT_OBJ_TOL,
                 'warm_start_init_point': "yes"
+                'linear_solver': "ma27"
             },
             # 'jit':True,
             'print_time': Config.PRINT_TIME,
@@ -173,7 +174,7 @@ class MPC():
         #     cname = self.solver.generate_dependencies("nmpc_v0.c")  
         #     system('gcc -fPIC -shared -O3 ' + cname + ' -o ' + self.so_path) # -O3
         #     self.compile_once = True
-        self.solver = ca.nlpsol("solver", "ipopt", nlp_prob, solver_opts)
+        self.solver = ca.nlpsol("solver", "ipopt", self.so_path, solver_opts)
     
         #### UNCOMMENT FOR NON COMPILED SOLVER ####
         # #create solver
