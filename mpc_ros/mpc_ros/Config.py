@@ -76,13 +76,18 @@ START_Y = 0
 START_PSI = np.deg2rad(0)
 
 ## GOAL
-GOAL_X = 200
-GOAL_Y = -150
-GOAL_Z = 80   
+"""
+When x is negative and y is positive and i have yaw command negative I hit the target 
+
+"""
+
+GOAL_X = -200 
+GOAL_Y = -200
+GOAL_Z = 50   
 GOAL_PSI = 0
 
 #### OBSTACLES ####
-OBSTACLE_AVOID = True
+OBSTACLE_AVOID = False
 MOVING_OBSTACLE = False
 MULTIPLE_OBSTACLE_AVOID = False
 ROBOT_DIAMETER = 5
@@ -92,7 +97,7 @@ RADAR_USE_CASADI = False
 
 OBSTACLE_X = 0
 OBSTACLE_Y = 0         
-OBSTACLE_DIAMETER = 30     
+OBSTACLE_DIAMETER = 10     
 OBSTACLE_VX = 0.0
 OBSTACLE_VY = 0.0
 
@@ -113,7 +118,7 @@ BUFFER_DISTANCE = 10
 
 
 #NLP solver options
-MAX_ITER = 100
+MAX_ITER = 300
 MAX_TIME = 0.1
 PRINT_LEVEL = 2
 ACCEPT_TOL = 1e-2

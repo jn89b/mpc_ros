@@ -4,7 +4,7 @@ import rclpy
 import numpy as np
 
 #from drone_interfaces.msg import Telem, CtlTraj
-from drone_ros.msg import Telem, CtlTraj
+from drone_interfaces.msg import Telem, CtlTraj
 from mpc_ros.CasadiModels.AirplaneModel import AirplaneSimpleModel
 from mpc_ros.MPC import MPC
 # from mpc_ros import RadarNetwork
@@ -370,10 +370,10 @@ def initFWMPC() -> AirplaneSimpleModelMPC:
         'u_phi_max': np.deg2rad(45),
         'u_theta_min': np.deg2rad(-5),
         'u_theta_max': np.deg2rad(5),
-        'z_min': 50,
+        'z_min': 30,
         'z_max': 100,
-        'v_cmd_min': 18,
-        'v_cmd_max': 22,
+        'v_cmd_min': 15,
+        'v_cmd_max': 25,
         'theta_min': np.deg2rad(-5),
         'theta_max': np.deg2rad(5),
         'phi_min': np.deg2rad(-45),

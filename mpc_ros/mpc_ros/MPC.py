@@ -154,6 +154,7 @@ class MPC():
                 'max_iter': Config.MAX_ITER,
                 'print_level': Config.PRINT_LEVEL,
                 'acceptable_tol': Config.ACCEPT_TOL,
+                'hsllib': '/usr/local/lib/libcoinhsl.so', #need to set the optimizer library
                 'acceptable_obj_change_tol': Config.ACCEPT_OBJ_TOL,
                 'warm_start_init_point': "yes",
                 'linear_solver': "ma27"
@@ -165,11 +166,11 @@ class MPC():
 
 
         #### UNCOMMENT FOR COMPILED SOLVER ####
-        self.so_path = 'compiled' + 'mpc_solver.so'
-        self.name_c = "nmpc_v0.c"
-        if Config.OBSTACLE_AVOID == True:
-            self.so_path = 'compiled' +'mpc_obstacle_solver.so'
-            self.name_c = 'mpc_obstacle_solver.c'
+        # self.so_path = 'compiled' + 'mpc_solver.so'
+        # self.name_c = "nmpc_v0.c"
+        # if Config.OBSTACLE_AVOID == True:
+        #     self.so_path = 'compiled' +'mpc_obstacle_solver.so'
+        #     self.name_c = 'mpc_obstacle_solver.c'
         # if Config.COMPILE == True and self.compile_once == False:
         #     print("Solver already compiled")
         #     self.solver = ca.nlpsol("solver", "ipopt", nlp_prob, solver_opts)
@@ -179,12 +180,12 @@ class MPC():
         #     system('gcc -pipe -fPIC -shared -O3 ' + cname + ' -o ' + self.so_path) # -O3
         #     self.compile_once = True
         #     print("done")
-        self.solver = ca.nlpsol("solver", "ipopt", self.so_path, solver_opts)
+        # self.solver = ca.nlpsol("solver", "ipopt", self.so_path, solver_opts)
     
         # #### UNCOMMENT FOR NON COMPILED SOLVER ####
         # #create solver
-        # self.solver = ca.nlpsol('solver', 'ipopt', 
-        #     nlp_prob, solver_opts)
+        self.solver = ca.nlpsol('solver', 'ipopt', 
+            nlp_prob, solver_opts)
         
     def reinitStartGoal(self, start, goal):
         self.state_init = ca.DM(start)   # initial state

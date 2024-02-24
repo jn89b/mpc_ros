@@ -4,7 +4,7 @@ import rclpy
 import numpy as np
 
 #from drone_interfaces.msg import Telem, CtlTraj
-from drone_ros.msg import Telem, CtlTraj
+from drone_interfaces.msg import Telem, CtlTraj
 from mpc_ros.CasadiModels.AirplaneModel import AirplaneSimpleModel
 from mpc_ros.MPC import MPC
 from mpc_ros import RadarNetwork
@@ -380,6 +380,8 @@ class MPCTrajFWPublisher(Node):
     def position_callback(self, msg):
         """
         ENU 
+        
+        Mavros yaw is CCW from North from 0 to pi then -pi to 0
         """
         self.state_info[0] = msg.pose.pose.position.x
         self.state_info[1] = msg.pose.pose.position.y
@@ -398,7 +400,7 @@ class MPCTrajFWPublisher(Node):
         self.state_info[5] = yaw  # (yaw+ (2*np.pi) ) % (2*np.pi);
         # wr
         print("roll in radians", roll)
-        print("yaw in radians", yaw)
+        print("yaw in degrees", np.rad2deg(yaw))
         print("pitch in radians", pitch)
 
         vx = msg.twist.twist.linear.x
@@ -443,6 +445,10 @@ class MPCTrajFWPublisher(Node):
         traj_phi = np.array(traj_dictionary['phi'])
         traj_theta = -np.array(traj_dictionary['theta'])
         traj_psi = np.array(traj_dictionary['psi'])
+        #convert psi to NED frame
+        traj_psi = traj_psi
+        
+        #convert psi to 
 
         traj_u_phi = np.array(traj_dictionary['u_phi'])
         traj_u_theta = -np.array(traj_dictionary['u_theta'])
@@ -524,7 +530,7 @@ def main(args=None):
     control_idx = 10
     state_idx = 5
     dist_error_tol = 5.0
-    idx_buffer = 5
+    idx_buffer = 2
 
     fw_mpc = initFWMPC()
     mpc_traj_node = MPCTrajFWPublisher()
